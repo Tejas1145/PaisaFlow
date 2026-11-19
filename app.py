@@ -51,8 +51,10 @@ def home():
     conn = get_db()
     expenses = conn.execute("SELECT * FROM expenses ORDER BY date DESC, id DESC").fetchall()
     budget_row = conn.execute("SELECT monthly_budget FROM settings WHERE id = 1").fetchone()
-    budget = budget_row["monthly_budget"] if budget_row else 5000
-    total_spent = sum(exp["amount"] for exp in expenses)
+    income = float(budget_row["monthly_budget"]) if budget_row else 5000.0
+    total_expense = float(sum(exp["amount"] for exp in expenses))
+    total_balance = income - total_expense
+    saving = max(0.0, total_balance)
 
     cat_totals = {}
     unique_dates = set()
@@ -63,15 +65,17 @@ def home():
             unique_dates.add(exp["date"])
 
     top_category = max(cat_totals, key=cat_totals.get) if cat_totals else "N/A"
-    top_amount = cat_totals[top_category] if cat_totals else 0
-    daily_avg = round(total_spent / len(unique_dates), 2) if unique_dates else 0
+    top_amount = float(cat_totals[top_category]) if cat_totals else 0.0
+    daily_avg = round(total_expense / len(unique_dates), 2) if unique_dates else 0.0
 
     conn.close()
     return render_template(
         "index.html",
         expenses=expenses,
-        budget=budget,
-        total_spent=total_spent,
+        income=income,
+        total_expense=total_expense,
+        total_balance=total_balance,
+        saving=saving,
         cat_labels=list(cat_totals.keys()),
         cat_values=list(cat_totals.values()),
         top_category=top_category,
